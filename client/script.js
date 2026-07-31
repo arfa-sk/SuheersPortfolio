@@ -346,20 +346,7 @@ function renderCustomSections(sections) {
 
 // ─── Initialize ───────────────────────────────────────────
 
-async function init() {
-    const [personal, hero, stats, about, projects, skills, journey, testimonials, settings, customSections] = await Promise.all([
-        API.getPersonal(),
-        API.getHero(),
-        API.getStats(),
-        API.getAbout(),
-        API.getProjects(),
-        API.getSkillCategories(),
-        API.getJourney(),
-        API.getTestimonials(),
-        API.getSiteSettings(),
-        API.getCustomSections(),
-    ]);
-
+function renderAll(personal, hero, stats, about, projects, skills, journey, testimonials, settings, customSections) {
     renderHero(hero, personal, stats);
     renderAbout(about, personal);
     renderProjects(projects, personal.github);
@@ -370,10 +357,32 @@ async function init() {
     renderFooter(personal);
     applyGradients(settings);
     renderCustomSections(customSections);
+}
 
+function init() {
+    // 1. INSTANT RENDER: Use local static data immediately so the user sees no loading delay (0ms load time)
+    renderAll(
+        PORTFOLIO.personal, PORTFOLIO.hero, PORTFOLIO.stats, PORTFOLIO.about,
+        PORTFOLIO.projects, PORTFOLIO.skillCategories, PORTFOLIO.journey, 
+        PORTFOLIO.testimonials, {}, []
+    );
+
+    // Initialize DOM animations
     initAnimations();
     init3DScrollTilt();
     initFolderScroll();
+
+    // 2. BACKGROUND FETCH: Asynchronously request fresh data from the API
+    // If the backend wakes up and responds, it will seamlessly re-render the UI in the background
+    Promise.all([
+        API.getPersonal(), API.getHero(), API.getStats(), API.getAbout(),
+        API.getProjects(), API.getSkillCategories(), API.getJourney(),
+        API.getTestimonials(), API.getSiteSettings(), API.getCustomSections(),
+    ]).then(([personal, hero, stats, about, projects, skills, journey, testimonials, settings, customSections]) => {
+        renderAll(personal, hero, stats, about, projects, skills, journey, testimonials, settings, customSections);
+    }).catch(() => {
+        // Silent catch: if API fails, the user already has the local static data on screen
+    });
 }
 
 // ─── Navbar Scroll ────────────────────────────────────────

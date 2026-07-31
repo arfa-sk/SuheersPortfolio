@@ -10,7 +10,14 @@ const API = {
 
     async _fetch(path) {
         try {
-            const res = await fetch(`${this.baseUrl}/api${path}`);
+            // Fail fast: Only wait 1.5s for the backend before instantly falling back to local data.
+            // This prevents the whole site from hanging if the server is sleeping or offline.
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 1500);
+            
+            const res = await fetch(`${this.baseUrl}/api${path}`, { signal: controller.signal });
+            clearTimeout(timeoutId);
+            
             if (!res.ok) throw new Error(res.statusText);
             return await res.json();
         } catch {
